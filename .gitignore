@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Logs and run outputs
+*.log
+*.log.*
+wandb/
+outputs/
+output/
+nohup.out
+
+# Model weights and checkpoints (keep large files out of git)
+checkpoints/
+ckpts*/
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+
+# Data (downloaded by scripts/afc/download_*.{py,sh} into ../afc_common/data)
+afc_common/
+data/
+playground/data/
+*.json
+*.jsonl
+!splits/afc/*.jsonl
+!**/alpaca-data-conversation.json
+
+# Credentials (never commit)
+.env
+.netrc
+.hf_token
+.wandb_key
+*.pem
+*.key
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+.ipynb_checkpoints/
+*.ipynb
+*.tmp.*
+
+# Demo
+serve_images/
+
+# DevContainer
+!.devcontainer/*

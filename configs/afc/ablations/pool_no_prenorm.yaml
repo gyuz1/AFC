@@ -1,0 +1,2 @@
+# pooling without query/key LayerNorm (collapses at init)
+pool_prenorm: false

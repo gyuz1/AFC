@@ -1,0 +1,36 @@
+# Main V2: block DCT + frequency Transformer + shared query pooling, 64 tokens.
+# Model / data paths and output_dir are given on the command line.
+compression_mode: block_dct
+block_size: 6
+target_visual_tokens: 64
+compressor_hidden_dim: 128
+compressor_layers: 2
+compressor_heads: 4
+compressor_ffn_dim: 512
+compressor_dropout: 0.0
+pool_heads: 4
+pos_mode: freq_and_block
+use_frequency_transformer: true
+adapter_type: mlp
+adapter_hidden_dim: 512
+query_sharing: shared
+kd_lambda: 0.0
+kd_temperature: 2.0
+diversity_lambda: 0.0
+version: v1
+# optimisation (identical for every ablation)
+learning_rate: 2.0e-4
+weight_decay: 0.0
+warmup_ratio: 0.03
+lr_scheduler_type: cosine
+num_train_epochs: 1
+per_device_train_batch_size: 4
+gradient_accumulation_steps: 4
+gradient_checkpointing: true
+bf16: true
+model_max_length: 768             # 0.24% of LLaVA-665k samples exceed it
+dataloader_num_workers: 4
+logging_steps: 10
+save_strategy: "no"
+seed: 42
+sample_seed: 0

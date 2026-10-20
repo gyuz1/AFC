@@ -1,0 +1,4 @@
+# 8x8 average pooling: parameter-free; with the frozen projector there is nothing to
+# train, so it is evaluated directly (scripts/afc/make_param_free_ckpt.py).
+compression_mode: avgpool
+target_visual_tokens: 64

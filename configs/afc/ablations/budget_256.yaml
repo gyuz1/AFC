@@ -1,0 +1,2 @@
+# budget: b=6, 16 blocks x 16 queries = 256 (Fourier-LLaVA C=16 row)
+target_visual_tokens: 256

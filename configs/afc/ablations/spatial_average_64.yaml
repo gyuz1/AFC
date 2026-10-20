@@ -1,0 +1,2 @@
+# A4: 2x2 average pooling of each 6x6 spatial block
+compression_mode: spatial_average

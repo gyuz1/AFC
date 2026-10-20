@@ -1,0 +1,27 @@
+# Token-budget sweep: full.yaml (block DCT) with 144 visual tokens.
+# Improved recipe: every performance option, applied on top of block_dct_64.yaml
+#   --config configs/afc/block_dct_64.yaml --config configs/afc/full.yaml
+residual_base: avgpool          # output = per-block average pooling + learned residual
+pool_learnable_scale: true      # per-head attention temperature (init 1)
+train_mm_projector: false       # frozen: training it hurt and also moved the KD teacher (shared projector)
+learning_rate: 2.0e-4           # new compressor modules (1e-3 diverged after ~1k steps in run full150k-v1)
+kd_lambda: 1.0                  # 576-token teacher (same weights), answer-aligned
+kd_temperature: 2.0
+group_by_modality_length: true  # similar-length batches: less padding
+return_compressor_attention: true
+logging_steps: 20
+save_strategy: steps
+save_steps: 500
+# validation loss on samples held out from the training pool
+eval_holdout: 500
+evaluation_strategy: steps
+eval_steps: 500
+per_device_eval_batch_size: 1
+prediction_loss_only: true
+# Throughput (measured on 2x RTX 3090, KD on): the 7B student backward and
+# the 576-token teacher dominate; without activation recomputation the step is
+# 1.6x faster than batch 12 with checkpointing (3.67 vs 2.28 samples/s).
+gradient_checkpointing: false
+per_device_train_batch_size: 1  # worst case (831 tokens) 17.9 GiB w/o checkpointing
+gradient_accumulation_steps: 12 # x 2 GPUs = effective batch 24
+target_visual_tokens: 144

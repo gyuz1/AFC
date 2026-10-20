@@ -1,0 +1,3 @@
+# A8: b=4, 36 blocks x 4 = 144
+block_size: 4
+target_visual_tokens: 144

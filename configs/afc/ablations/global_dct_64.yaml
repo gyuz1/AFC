@@ -1,0 +1,2 @@
+# A2: one 24x24 DCT, 64 queries over 576 frequencies, no block pos
+compression_mode: global_dct
