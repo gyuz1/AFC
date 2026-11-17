@@ -1,2 +1,0 @@
-# A1: no DCT, same blocks / encoder / pooling / adapter
-compression_mode: spatial_block

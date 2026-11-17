@@ -31,7 +31,7 @@ REPO = Path(__file__).resolve().parents[2]
 EVAL = REPO / "outputs/eval"
 TOKENS = (64, 144, 256)
 PENDING = "⏳"
-DOC = REPO / "docs/AFC_RESULTS_TABLE.md"
+DOC = REPO / "outputs/report/AFC_RESULTS_TABLE.md"
 # Okabe-Ito (colour-blind safe); identity also carried by marker + label
 STYLE = {
     "AFC global (ours)": dict(color="#D55E00", marker="o"),

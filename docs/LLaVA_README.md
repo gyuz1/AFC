@@ -1,7 +1,7 @@
 > **Adaptive Fourier VLM Compressor (fork).** This repository is LLaVA
 > (commit c121f04) plus a trainable frequency-domain visual token compressor
 > for LLaVA-1.5-7B (576 -> 64 visual tokens: block DCT, frequency Transformer,
-> learnable query pooling). See [docs/AFC.md](docs/AFC.md). The original
+> learnable query pooling). See the [AFC README](../README.md). The original
 > LLaVA README follows unchanged.
 
 # 🌋 LLaVA: Large Language and Vision Assistant

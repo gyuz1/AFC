@@ -7,7 +7,7 @@ Data, conversation preprocessing and label masking are LLaVA's own
 (``LazySupervisedDataset``, ``preprocess``, ``DataCollatorForSupervisedDataset``).
 
     python -m llava.train.train_compressor --config configs/afc/block_dct_64.yaml \
-        [--config configs/afc/ablations/<one axis>.yaml] \
+        [--config configs/afc/<config>.yaml] \
         --model_name_or_path liuhaotian/llava-v1.5-7b \
         --data_path <llava json> --image_folder <images> \
         --output_dir checkpoints/llava-v1.5-7b-afc-block_dct_64

@@ -1,2 +1,0 @@
-# A4: top-left 2x2 DCT coefficients per block (no Transformer / pooling)
-compression_mode: fixed_lowpass
