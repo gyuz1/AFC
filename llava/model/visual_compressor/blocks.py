@@ -1,9 +1,4 @@
-"""Spatial grid <-> non-overlapping blocks (deterministic raster order).
-
-Block j covers rows ``r_j * b ... r_j * b + b - 1`` and columns
-``c_j * b ...`` of the grid, with ``j = r_j * (N / b) + c_j``
-(block 0 = top-left, block 1 = its right neighbour, ...).
-"""
+"""Spatial grid <-> non-overlapping blocks (raster order, block 0 = top-left)."""
 
 import math
 

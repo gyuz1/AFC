@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
-# Download the LLaVA-1.5 instruction-tuning data into $AFC_DATA/llava_train
-# and write llava_v1_5_available.json (only samples whose image exists).
-#
-#   bash scripts/afc/download_llava_train.sh       (~57 GB of zips, resumable)
-#
-# Image folders expected by llava_v1_5_mix665k.json:
-#   coco/train2017  gqa/images  vg/VG_100K  vg/VG_100K_2  textvqa/train_images
-#   ocr_vqa/images  (NOT downloaded: per-image crawling; those samples are
-#                    dropped from llava_v1_5_available.json)
-# KEEP_ZIPS=1 keeps the archives after extraction.
+# Download the LLaVA-1.5 instruction data into $AFC_DATA/llava_train (~57 GB) and
+# write llava_v1_5_available.json (OCR-VQA images are not downloaded; those samples are dropped).
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 AFC_DATA="$(realpath -m "${AFC_DATA:-${REPO}/../afc_common/data}")"

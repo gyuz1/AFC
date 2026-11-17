@@ -1,5 +1,5 @@
 # Source in every new shell / terminal:   source scripts/afc/env.sh
-# Activates the `afc` env, cds to the repo and exports the AFC paths.
+# source scripts/afc/env.sh   # activate the env and export the AFC paths
 eval "$(conda shell.bash hook)"
 conda activate "${ENV_NAME:-afc}"
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

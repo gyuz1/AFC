@@ -1,10 +1,4 @@
-"""Configuration of the visual token compressor.
-
-The user-facing budget is ``target_visual_tokens``; the number of outputs per
-block (``queries_per_block``, "k") is derived and must divide exactly.
-``k`` counts OUTPUT tokens per block, not input candidates (a b x b block
-always has b*b input tokens).
-"""
+"""Compressor configuration (stored as ``visual_compressor`` in config.json)."""
 
 import dataclasses
 import math
@@ -35,12 +29,8 @@ class VisualCompressorConfig:
     compressor_dropout: float = 0.0
     pool_heads: int = 4
     pool_prenorm: bool = True
-    # Learnable per-head logit scale of the pooling attention (init 1.0).
     pool_learnable_scale: bool = False
-    # Residual base: output = base + adapter(pooled). "avgpool" = per-block
-    # spatial average pooling to the k output positions (training-free,
-    # CLIP-distributed); the adapter's last layer starts at zero, so training
-    # starts from the base. "none" = adapter output only.
+    # "avgpool": output = average pooling + adapter(pooled), adapter starts at zero
     residual_base: str = "none"
     # fourier_vlm only: multiply by C / N after the C-point inverse DCT
     fourier_scale: bool = True
@@ -50,12 +40,8 @@ class VisualCompressorConfig:
     adapter_hidden_dim: int = 512
     query_sharing: str = "shared"
     pos_init_std: float = 0.02
-    # Compress only the image area of LLaVA's square-padded input: the
-    # padding rows/cols (located from the original image size) are cut from
-    # the CLIP grid before the DCT; frequency positions are interpolated on a
-    # normalised axis. Requires ``image_sizes`` at forward time.
+    # Remove LLaVA's square padding before the DCT (needs ``image_sizes``)
     valid_region: bool = False
-    # Filled from the vision tower / LLaVA config by ``resolve``.
     grid_size: Optional[int] = None
     input_dim: Optional[int] = None
 

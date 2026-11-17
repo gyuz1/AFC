@@ -1,10 +1,4 @@
-"""Learned factorized 2-D positional embeddings.
-
-Two different meanings are used with the same factorized form:
-* inner position (u, v): DCT frequency coordinate of a token inside a block
-  (DCT modes) or its spatial (row, col) inside the block (spatial modes);
-* block position (r, c): where the block lies in the original image grid.
-"""
+"""Learned factorized 2-D position embeddings (frequency or block position)."""
 
 import torch
 from torch import nn

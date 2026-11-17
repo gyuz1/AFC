@@ -1,12 +1,6 @@
-"""Image area of LLaVA's square-padded input on the CLIP patch grid.
+"""Image area (without LLaVA's square padding) on the CLIP patch grid.
 
-LLaVA-1.5 (``image_aspect_ratio=pad``) pastes a W x H image at offset
-((L - W) // 2, (L - H) // 2) on an L x L canvas (L = max(W, H)) filled with
-the CLIP mean colour and resizes it to the vision tower's square input. On an
-N x N patch grid the image occupies [off * N / L, (off + size) * N / L) along
-each axis. A patch row / column is kept when more than half of it is image
-(its centre lies inside), so the cut is exact when the border falls on a patch
-boundary (4:3 and 3:2 photos) and off by at most half a patch otherwise.
+A patch row / column is kept when more than half of it is image.
 """
 
 import math
@@ -17,11 +11,7 @@ import torch
 
 def valid_box(width: int, height: int, n: int, min_side: int = 1
               ) -> Tuple[int, int, int, int]:
-    """``(r0, r1, c0, c1)``: rows ``r0:r1`` and cols ``c0:c1`` hold the image.
-
-    Each side keeps at least ``min_side`` patches (grown symmetrically into
-    the padding for extreme aspect ratios).
-    """
+    """``(r0, r1, c0, c1)`` of the image area (at least ``min_side`` per side)."""
     side = max(width, height)
 
     def span(size: int) -> Tuple[int, int]:
@@ -46,12 +36,7 @@ def split_sizes(length: int, parts: int) -> Sequence[int]:
 
 
 def interp_rows(table: torch.Tensor, length: int) -> torch.Tensor:
-    """Rows of a learned ``(S, d)`` table at normalised positions.
-
-    Index ``u`` of a length-``length`` axis maps to ``u * S / length``
-    (same normalised frequency / position); linear interpolation between the
-    two neighbouring rows. ``length == S`` returns ``table`` unchanged.
-    """
+    """Linearly interpolate a learned ``(S, d)`` table to ``length`` rows."""
     size = table.shape[0]
     if length == size:
         return table

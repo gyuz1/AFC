@@ -1,22 +1,7 @@
 #!/usr/bin/env bash
-# Unattended pipeline for the main AFC model (block DCT, 64 tokens):
-#   wait_data -> smoke -> profile -> train -> eval_quick -> eval_full
-#
-# Launch detached (survives logout):
-#   setsid nohup bash scripts/afc/pipeline_main.sh > /dev/null 2>&1 &
-# Resume from a stage after fixing a failure:
-#   START_STAGE=train setsid nohup bash scripts/afc/pipeline_main.sh ... &
-#
-# Progress: outputs/pipeline/main/status (one line per stage event) and
-#           outputs/pipeline/main/<stage>.log ; pipeline.log is the driver.
-# Env: MAX_TRAIN_SAMPLES (10000; "all" = whole dataset), TRAIN_GPU (0, used
-#      for profiling), TRAIN_GPUS (training: "0" or "0,1" for DDP),
-#      EXTRA_CONFIG (yaml applied after the base config), RESUME (checkpoint
-#      dir to resume the train stage from), PROFILE_BS ("1 2 4 8"),
-#      EVAL_GPUS ("0 1"),
-#      MEM_LIMIT_GIB (22), TARGET_EFFECTIVE_BATCH (16), QUICK_LIMIT (500),
-#      WANDB_PROJECT (afc; credentials from `wandb login`, never stored here),
-#      USE_WANDB (1).
+# Train -> quick eval -> full eval for one AFC configuration.
+#   RUN_NAME=<name> EXTRA_CONFIG=<yaml> MAX_TRAIN_SAMPLES=all TRAIN_GPUS=0,1 bash scripts/afc/pipeline_main.sh
+# Env: START_STAGE, RESUME, EVAL_GPUS, TARGET_EFFECTIVE_BATCH, USE_WANDB (see README).
 set -uo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -65,7 +50,6 @@ run_stage() {  # run_stage <name> <function>
     fi
 }
 
-# ---------------------------------------------------------------- stages
 wait_data() {
     while pgrep -f download_llava_train.sh > /dev/null \
             || [[ ! -s "${DATA_PATH}" ]]; do
@@ -145,7 +129,7 @@ eval_quick() {
 }
 
 eval_full() {
-    local a=(textvqa gqa) b=(mmbench pope scienceqa mmmu textvqa_tune gqa_tune)  # ~equal GPU time
+    local a=(textvqa gqa) b=(mmbench pope scienceqa mmmu textvqa_tune gqa_tune)
     if [[ ${#EVAL_GPUS[@]} -ge 2 ]]; then
         GPU="${EVAL_GPUS[0]}" BENCH="${a[*]}" bash scripts/afc/run_eval.sh \
             "${CKPT}" outputs/eval > "${DIR}/eval_full_a.log" 2>&1 &
@@ -166,7 +150,6 @@ eval_full() {
         "${wb[@]}"
 }
 
-# ---------------------------------------------------------------- driver
 started=0
 for s in "${STAGES[@]}"; do
     [[ "${s}" == "${START_STAGE:-wait_data}" ]] && started=1

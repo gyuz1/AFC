@@ -1,4 +1,3 @@
-# Fourier-VLM FFC (global DCT, keep 8x8, C-point iDCT x C/N): parameter-free; with the frozen projector there is nothing to
-# train, so it is evaluated directly (scripts/afc/make_param_free_ckpt.py).
+# Fourier-VLM low-frequency truncation baseline (parameter-free).
 compression_mode: fourier_vlm
 target_visual_tokens: 64

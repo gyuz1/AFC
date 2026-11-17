@@ -1,22 +1,11 @@
-"""Train the visual token compressor on a frozen LLaVA-1.5 (AFC / V2).
-
-Everything except the compressor is frozen: CLIP, mm_projector, Vicuna and
-the LM head. The student LLM forward is NOT under no_grad, so the answer CE
-gradient flows through the frozen LLM and projector into the compressor.
-Data, conversation preprocessing and label masking are LLaVA's own
-(``LazySupervisedDataset``, ``preprocess``, ``DataCollatorForSupervisedDataset``).
+"""Train the compressor on a frozen LLaVA-1.5 (CLIP, projector and LLM frozen).
 
     python -m llava.train.train_compressor --config configs/afc/block_dct_64.yaml \
-        [--config configs/afc/<config>.yaml] \
-        --model_name_or_path liuhaotian/llava-v1.5-7b \
-        --data_path <llava json> --image_folder <images> \
-        --output_dir checkpoints/llava-v1.5-7b-afc-block_dct_64
+        --config configs/afc/<config>.yaml --model_name_or_path <llava-v1.5-7b> \
+        --data_path <llava json> --image_folder <images> --output_dir <dir>
 
-Several --config files are applied in order (later ones override earlier
-ones); CLI flags override all YAML. One GPU: ``python -m ...``; several GPUs (DDP):
-``torchrun --nproc_per_node N -m llava.train.train_compressor ...``.
-With ``--train_mm_projector`` the projector is trained too (its own
-``--mm_projector_lr``) and saved in the compressor checkpoint.
+Later --config files override earlier ones; CLI flags override YAML.
+Use torchrun for multiple GPUs.
 """
 
 import copy
@@ -69,7 +58,6 @@ class SizedCollator(DataCollatorForSupervisedDataset):
         return batch
 
 
-# Files of the base checkpoint that are not linked into the compressor dir.
 _NOT_LINKED = {"config.json", "README.md", WEIGHTS_NAME}
 
 
@@ -142,7 +130,6 @@ class CompressorTrainingArguments(TrainingArguments):
     ddp_find_unused_parameters: bool = False
 
 
-# ---------------------------------------------------------------------------
 def parse_args():
     parser = HfArgumentParser((CompressorArguments, CompressorDataArguments,
                                CompressorTrainingArguments))
@@ -190,12 +177,7 @@ def local_model_dir(path: str) -> str:
 
 
 def save_compressor_checkpoint(model, output_dir: str, base_dir: str):
-    """Save compressor weights + config; link the frozen base files.
-
-    The result is a complete LLaVA model directory (loadable by
-    ``load_pretrained_model``, the official eval scripts and lmms-eval) that
-    stores only the compressor.
-    """
+    """Save compressor weights + config and link the frozen base model files."""
     os.makedirs(output_dir, exist_ok=True)
     inner = model.get_model()
     state = {f"compressor.{k}": v.detach().cpu()
@@ -370,8 +352,6 @@ def main():
     conversation_lib.default_conversation = \
         conversation_lib.conv_templates[comp_args.version]
 
-    # Ranks load one after another and move to their GPU at once, so host
-    # RAM holds a single CPU copy of the 7B weights at a time.
     with training_args.main_process_first(local=True, desc="load LLaVA"):
         model = LlavaLlamaForCausalLM.from_pretrained(
             base_dir, torch_dtype=dtype, low_cpu_mem_usage=True,
@@ -415,8 +395,6 @@ def main():
     if comp_args.eval_holdout > 0:
         rest = sorted(set(range(len(pool))) - set(idx))
         if len(rest) < comp_args.eval_holdout:
-            # Training uses (nearly) the whole pool: carve the held-out
-            # samples out of the training subset so they stay disjoint.
             ev = sorted(random.Random(comp_args.sample_seed + 1).sample(
                 idx, comp_args.eval_holdout))
             held = set(ev)

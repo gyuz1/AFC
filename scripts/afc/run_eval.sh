@@ -1,22 +1,7 @@
 #!/usr/bin/env bash
-# Evaluate ONE LLaVA model directory on ONE GPU (batch size 1).
-#   vanilla:    the original llava-v1.5-7b directory
-#   compressor: a train_compressor checkpoint directory (config.json carries
-#               the compressor settings; weights in visual_compressor.bin)
-#
-# Usage:
-#   GPU=0 LIMIT=500 bash scripts/afc/run_eval.sh <model dir> [out root]
-#
-# Env:
-#   GPU      CUDA device index (default 0)
-#   LIMIT    dev runs: questions per benchmark (MMBench: base questions);
-#            empty = full split (final tables)
-#   BENCH    subset of: textvqa mmbench gqa pope scienceqa mmmu
-#            textvqa_tune gqa_tune   (default: the 6 evaluation benchmarks)
-#   TUNE_N   questions of the tuning splits (default 1000)
-#   PY       python of the `afc` env
-# Outputs: <out root>/<model dir name>[_limitN]/   (out root default:
-#          ./outputs/eval)
+# Evaluate one LLaVA model directory (vanilla or AFC checkpoint) on one GPU.
+#   GPU=0 [BENCH="gqa pope ..."] [LIMIT=500] bash scripts/afc/run_eval.sh <model dir> [out root]
+# Default: the six benchmarks, full splits; results in <out root>/<model dir name>/.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -27,7 +12,6 @@ export CUDA_VISIBLE_DEVICES="${GPU:-0}"
 export HF_HOME="${HF_HOME:-${AFC_DATA}/hf_cache}"
 [[ -f "${HOME}/.cache/huggingface/token" ]] \
     && export HF_TOKEN_PATH="${HOME}/.cache/huggingface/token"
-# machines without an HF login: token in <workspace>/.hf_token (mode 600)
 _HFT="$(dirname "${REPO:-$(pwd)}")/.hf_token"
 [[ -z "${HF_TOKEN:-}" && -z "${HF_TOKEN_PATH:-}" && -f "${_HFT}" ]] && export HF_TOKEN="$(cat "${_HFT}")"
 PY="${PY:-python}"
@@ -42,7 +26,7 @@ RUN="${OUT_ROOT}/${TAG}${LIMIT:+_limit${LIMIT}}"
 mkdir -p "${RUN}"
 echo "[run_eval] ${TAG} gpu=${CUDA_VISIBLE_DEVICES} limit=${LIMIT:-full}" \
      "-> ${RUN}"
-cp -f "${MODEL}/config.json" "${RUN}/model_config.json" 2>/dev/null || true  # parallel halves race on this copy
+cp -f "${MODEL}/config.json" "${RUN}/model_config.json" 2>/dev/null || true
 
 subset_jsonl() {  # subset_jsonl <in> <n> <out>
     if [[ -n "$2" ]]; then head -n "$2" "$1" > "$3"; else cp "$1" "$3"; fi
@@ -74,7 +58,7 @@ for bench in ${BENCH}; do
         ;;
     mmbench)
         TSV="${EVAL}/mmbench/mmbench_dev_20230712.tsv"
-        if [[ -n "${LIMIT}" ]]; then  # keep whole circular groups
+        if [[ -n "${LIMIT}" ]]; then
             ${PY} - "${TSV}" "${LIMIT}" "${RUN}/mmbench.tsv" <<'EOF'
 import sys, pandas as pd
 df = pd.read_csv(sys.argv[1], sep="\t")

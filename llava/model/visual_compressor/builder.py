@@ -1,9 +1,4 @@
-"""Build the compressor from a LLaVA model config.
-
-The compressor settings live in ``config.visual_compressor`` (a dict saved in
-the checkpoint's config.json). Missing or ``compression_mode=none`` -> None,
-so vanilla checkpoints build no extra module.
-"""
+"""Build / load the compressor from a LLaVA model config."""
 
 import contextlib
 import os
@@ -46,12 +41,7 @@ def build_visual_compressor(model_config,
 
 
 def load_compressor_weights(model, model_path: str) -> bool:
-    """Load ``visual_compressor.bin`` from a checkpoint directory.
-
-    Returns False when the model has no compressor (vanilla). Raises when a
-    compressor is configured but its weights are missing: an untrained
-    compressor must never be evaluated silently.
-    """
+    """Load ``visual_compressor.bin``; False for vanilla models, error if missing."""
     compressor = model.get_model().get_visual_compressor()
     if compressor is None:
         return False
@@ -71,8 +61,6 @@ def load_compressor_weights(model, model_path: str) -> bool:
     compressor.load_state_dict(comp, strict=True)   # {} for parameter-free
     if proj:  # projector trained together with the compressor
         model.get_model().mm_projector.load_state_dict(proj, strict=True)
-    # HF warns that visual_compressor.* were "newly initialized" because the
-    # LLM shards do not contain them; they are replaced here.
     print(f"[afc] loaded {len(comp)} compressor"
           f"{f' + {len(proj)} mm_projector' if proj else ''} tensors from {path} "
           f"({compressor.cfg.compression_mode}, "

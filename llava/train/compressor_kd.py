@@ -1,15 +1,5 @@
-"""Teacher-student logit distillation aligned by ANSWER TOKEN ORDINAL.
-
-Teacher (576 visual tokens) and student (e.g. 64) sequences have different
-lengths, so absolute positions are never compared. With causal shift, the
-logit at position t predicts label t+1; for every sample we keep the shifted
-positions whose label is not IGNORE_INDEX (the answer tokens), check that
-teacher and student targets are identical and in the same order, and compare
-the m-th answer prediction of the teacher with the m-th of the student.
-
-    L_KD = T^2 * KL(softmax(z_T / T) || softmax(z_S / T))   (exact, full vocab)
-averaged over all answer tokens of the batch.
-"""
+"""Answer-token KD: L_KD = T^2 * KL(p_teacher || p_student), averaged over answer
+tokens (teacher and student sequences are aligned by answer-token order)."""
 
 from typing import List, Tuple
 
@@ -21,11 +11,7 @@ from llava.constants import IGNORE_INDEX
 
 def answer_logits(logits: torch.Tensor, labels: torch.Tensor
                   ) -> List[Tuple[torch.Tensor, torch.Tensor]]:
-    """Per sample: (logits predicting answer tokens (n_i, V), targets (n_i,)).
-
-    ``logits`` ``(B, L, V)`` and ``labels`` ``(B, L)`` are the multimodal
-    (post image insertion) tensors of one forward pass.
-    """
+    """Per sample: logits predicting answer tokens (n_i, V) and their targets."""
     if logits.shape[:2] != labels.shape:
         raise ValueError(f"logits {tuple(logits.shape)} vs labels "
                          f"{tuple(labels.shape)}")

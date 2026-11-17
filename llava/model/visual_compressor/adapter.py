@@ -1,8 +1,4 @@
-"""Frequency-to-visual adapter: d -> 1024-D CLIP-like features.
-
-The frozen LLaVA ``mm_projector`` expects CLIP patch features, so pooled
-d-dimensional tokens are mapped back to the CLIP width.
-"""
+"""Adapter: d -> 1024 (CLIP width expected by the frozen mm_projector)."""
 
 from torch import nn
 

@@ -1,8 +1,4 @@
-"""Query-collapse diagnostics for the pooling attention.
-
-Attention weights describe query-frequency affinity / utilisation patterns;
-they are not causal importance.
-"""
+"""Query-collapse diagnostics for the pooling attention."""
 
 from typing import Dict
 
@@ -49,7 +45,6 @@ def summarize(attn: torch.Tensor, pooled: torch.Tensor = None) -> Dict:
         "attn_entropy": attention_entropy(a).mean().item(),
         "attn_entropy_max": float(torch.log(torch.tensor(float(n)))),
         "query_attn_cosine": pairwise_cosine(a).mean().item(),
-        # spread of the same query's map across blocks / images
         "block_variation": a.std(dim=1).mean().item(),
         "image_variation": a.std(dim=0).mean().item() if a.shape[0] > 1
         else float("nan"),

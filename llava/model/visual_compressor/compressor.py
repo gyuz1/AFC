@@ -1,26 +1,7 @@
-"""Visual token compressor inserted between CLIP and the LLaVA mm_projector.
+"""AFC: DCT -> frequency token encoder -> learnable query pooling -> adapter,
+added to average pooling of the CLIP grid.  (B, 576, 1024) -> (B, K, 1024).
 
-Main mode ``block_dct`` (defaults: 24x24 grid, b=6, 64 tokens):
-
-    CLIP patches             (B, 576, 1024)
-    -> grid                  (B, 24, 24, 1024)
-    -> blocks                (B, 16, 6, 6, 1024)
-    -> block DCT             (B, 16, 6, 6, 1024)   spatial axes only
-    -> frequency tokens      (B, 16, 36, 1024)
-    -> LN + 1024->128 + pos  (B, 16, 36, 128)
-    -> frequency Transformer (B, 16, 36, 128)
-    -> query pooling (k=4)   (B, 16, 4, 128)       attention (B, 16, H, 4, 36)
-    -> adapter 128->1024     (B, 16, 4, 1024)
-    -> flatten (raster)      (B, 64, 1024)         -> frozen mm_projector
-
-Ablation modes differ ONLY in how block tokens are formed; projection,
-positions, Transformer, pooling and adapter are the same modules:
-
-    global_dct      one 24x24 DCT, 576 frequency tokens, T queries, no block pos
-    spatial_block   6x6 blocks WITHOUT DCT (inner pos = spatial row/col)
-    fixed_lowpass   keep the top-left c x c DCT coefficients per block
-                    (no Transformer, no pooling): projection + pos + adapter
-    spatial_average c x c average pooling of each spatial block, same head
+Modes: block_dct (AFC-block, 16 blocks of 6x6) and global_dct (AFC-global, 24x24).
 """
 
 from typing import Dict, Optional, Sequence
@@ -91,17 +72,11 @@ class VisualCompressor(nn.Module):
                     if isinstance(m, nn.Linear)][-1]
             nn.init.zeros_(last.weight)                   # start at the base
             nn.init.zeros_(last.bias)
-        # Diagnostics (not part of the forward result). ``keep_attention``
-        # stores the pooling attention (with its graph, e.g. for an optional
-        # diversity loss) on every forward call made by LLaVA.
         self.keep_attention = False
-        # dtype of the returned tokens (None = input dtype); set when the
-        # consumer (mm_projector) runs in a different precision.
         self.output_dtype: Optional[torch.dtype] = None
         self.last_attention: Optional[torch.Tensor] = None
         self.last_shapes: Dict[str, tuple] = {}
 
-    # ------------------------------------------------------------------
     def describe(self) -> str:
         n_param = sum(p.numel() for p in self.parameters())
         return f"{self.cfg.describe()}\nParameters: {n_param:,}"

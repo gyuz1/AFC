@@ -1,17 +1,6 @@
-"""Learnable query pooling: k queries cross-attend to all N tokens of a block.
+"""Learnable query pooling: k queries cross-attend to the N tokens of a block.
 
-    Q = Q_pool W_Q,  K_j = H_j W_K,  V_j = H_j W_V
-    A_j = softmax(Q K_j^T / sqrt(d_h))         (per head, k x N, rows sum to 1)
-    O_j = concat_heads(A_j V_j) W_O            (k x d)
-
-With ``prenorm`` (default) the queries and the keys/values are LayerNorm-ed
-first (Pre-LN cross-attention, as in Perceiver / Q-Former). Without it the
-small query init (std 0.02) gives near-zero scores: every query attends
-uniformly and all k outputs of a block are identical at initialisation.
-
-Every query sees every input token; outputs are soft combinations, nothing is
-selected discretely. One query set is shared by all blocks by default
-(``block_specific`` gives each block its own queries, for ablation).
+    A = softmax(Q W_Q (H W_K)^T / sqrt(d_h)),  O = concat_heads(A H W_V) W_O
 """
 
 import math
@@ -43,7 +32,6 @@ class QueryPooling(nn.Module):
         self.v_proj = nn.Linear(dim, dim)
         self.out_proj = nn.Linear(dim, dim)
         self.attn_drop = nn.Dropout(dropout)
-        # log-scale per head, exp(0) = 1 at init (no change to attention)
         self.log_scale = (nn.Parameter(torch.zeros(heads, 1, 1))
                           if learnable_scale else None)
 

@@ -1,16 +1,6 @@
 #!/usr/bin/env bash
-# Create the `afc` conda env for this LLaVA fork (training + evaluation).
-#   bash scripts/afc/setup_env.sh
-#
-# Layout: this repo next to a workspace directory (AFC_WORKSPACE, default
-# <repo>/../afc_common) that holds data/ and third_party/ (lmms-eval and an
-# unmodified LLaVA checkout used to verify the vanilla path bitwise).
-#
-# Version constraints:
-#   - LLaVA pins transformers==4.37.2; lmms-eval v0.2.0 is the last release
-#     that accepts it.
-#   - accelerate 0.29.3 / peft 0.10.0 satisfy lmms-eval and torch 2.1.2.
-#   - flash-attn skipped (system nvcc 11.7); sdpa / eager are used.
+# Create the `afc` conda env.   bash scripts/afc/setup_env.sh
+# transformers 4.37.2 (pinned by LLaVA) requires lmms-eval v0.2.0.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -27,10 +17,10 @@ cd "${WS}/third_party"
 [[ -d lmms-eval ]] || git clone https://github.com/EvolvingLMMs-Lab/lmms-eval.git
 [[ -d LLaVA ]] || git clone https://github.com/haotian-liu/LLaVA.git
 git -C lmms-eval checkout -q v0.2.0
-git -C LLaVA checkout -q c121f04          # pristine reference (not installed)
+git -C LLaVA checkout -q c121f04
 
 pip install torch==2.1.2 torchvision==0.16.2
-pip install -e "${REPO}"                  # this fork (package `llava`)
+pip install -e "${REPO}"
 pip install -e lmms-eval
 pip install calflops gdown pyarrow pandas pytest hf_transfer ipykernel
 pip install "numpy==1.26.4" "accelerate==0.29.3" "peft==0.10.0" \

@@ -1,16 +1,7 @@
-"""Training objective of the visual compressor as ONE module forward.
+"""Training loss (CE + answer-token KD) as one module forward.
 
-    embeddings (CLIP -> compressor -> projector -> <image> insertion)
-    -> LLaMA decoder -> hidden states (B, L, 4096)
-    -> keep only positions whose shifted label is an answer token
-    -> lm_head on those positions only (n, |V|) -> CE  (+ KD vs. the
-       576-token teacher, computed the same way under no_grad)
-
-Equivalent to HF's causal-LM loss (mean CE over non-ignored shifted labels)
-but never materialises (B, L, |V|) logits: with ~700 positions and a few
-dozen answer tokens per sample this removes most of the LM-head time and
-memory, for the student and the teacher. Running everything inside this
-module's forward lets DDP see every trainable parameter in one graph.
+The LM head is applied only to answer positions, so full (B, L, |V|) logits are
+never materialised.
 """
 
 from typing import Dict, Optional
@@ -24,12 +15,7 @@ from llava.model.visual_compressor.builder import compressor_disabled
 
 
 def answer_positions(hidden: torch.Tensor, labels: torch.Tensor):
-    """Hidden states that predict answer tokens and their targets.
-
-    ``hidden`` (B, L, H), ``labels`` (B, L) post-insertion. Position t
-    predicts label t+1. Returns ``(h (n, H), targets (n,), counts (B,))``
-    flattened in batch order (sample 0's answer tokens first).
-    """
+    """Hidden states predicting answer tokens: ``(h (n, H), targets (n,), counts (B,))``."""
     h = hidden[:, :-1]
     y = labels[:, 1:]
     keep = y != IGNORE_INDEX
@@ -56,7 +42,6 @@ class CompressorObjective(nn.Module):
         self.kd_lambda = kd_lambda
         self.kd_temperature = kd_temperature
 
-    # --- attributes the HF Trainer expects ------------------------------
     @property
     def config(self):
         return self.llava.config
@@ -71,7 +56,6 @@ class CompressorObjective(nn.Module):
     def gradient_checkpointing_disable(self):
         self.llava.gradient_checkpointing_disable()
 
-    # ------------------------------------------------------------------
     def _answer_logits(self, input_ids, labels, attention_mask, images,
                        image_sizes):
         llava = self.llava
@@ -92,8 +76,6 @@ class CompressorObjective(nn.Module):
         images = ([x.to(dtype) for x in images] if isinstance(images, list)
                   else images.to(dtype))
         amp = dtype in (torch.bfloat16, torch.float16)
-        # Explicit autocast: fp32 trainable compressor / projector meet bf16
-        # CLIP features and LLM weights.
         with torch.autocast(device_type="cuda", dtype=dtype, enabled=amp):
             zs, ys, counts, seq_shape = self._answer_logits(
                 input_ids, labels, attention_mask, images, image_sizes)

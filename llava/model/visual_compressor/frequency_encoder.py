@@ -1,13 +1,5 @@
-"""Token encoder shared by all compressor modes.
-
-    X_{j,n} = Linear_{D->d}(LayerNorm_D(F_{j,n})) [+ e_inner(n)] [+ e_block(j)]
-    H_j     = TransformerEncoder(X_j)     (or H_j = X_j when disabled)
-
-``LayerNorm_D`` normalises the 1024-D input coefficients (a coefficient's
-magnitude is therefore not passed through as an implicit energy prior);
-the Transformer's own Pre-LN norms are a separate, internal mechanism.
-The D -> d projection is a channel bottleneck: the token count is unchanged.
-"""
+"""Frequency token encoder: LN + Linear(1024 -> d) + position embeddings,
+then a Pre-LN Transformer encoder (per block)."""
 
 import torch
 from torch import nn
@@ -34,7 +26,6 @@ class FrequencyTokenEncoder(nn.Module):
                 d_model=dim, nhead=heads, dim_feedforward=ffn_dim,
                 dropout=dropout, activation="gelu", batch_first=True,
                 norm_first=True)
-            # enable_nested_tensor only matters with padding masks (none here)
             self.transformer = nn.TransformerEncoder(
                 layer, num_layers=layers, enable_nested_tensor=False)
         else:

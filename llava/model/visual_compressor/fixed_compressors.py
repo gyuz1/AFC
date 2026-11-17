@@ -1,26 +1,11 @@
-"""Parameter-free compression baselines (same interface as VisualCompressor).
+"""Training-free baselines used with the frozen LLaVA.
 
-    fourier_vlm  Fourier-VLM's FFC (arXiv 2508.06038): 2-D DCT over the whole
-                 N x N grid, keep the top-left C x C coefficients, inverse DCT
-                 with the C-point basis -> C x C tokens (raster), C^2 = target.
-                 ``fourier_scale`` multiplies by C / N so a constant feature
-                 map is preserved; the original code has no such factor (it
-                 absorbs the N / C amplification by retraining the LLM).
-    avgpool      spatial average pooling of the N x N grid to the most square
-                 r x s grid with r * s = target (8x8 for 64 tokens: each token
-                 averages a 3x3 patch cell). Equals the training-free base of
-                 the residual compressors.
-
-    prumerge     LLaVA-PruMerge (Shang et al., 2024), training free: port of the
-                 official `token_prune_merge_advanced` (github.com/42Shawn/
-                 LLaVA-PruMerge, Apache-2.0). [CLS] attention from the last CLIP
-                 layer's q / k, top tokens kept in attention order, each merged
-                 with its 32 key-nearest tokens weighted by [CLS] attention, plus
-                 one token summarising all pruned tokens. Only change: instead of
-                 the adaptive IQR count, K - 1 tokens are kept so that exactly K
-                 (= target_visual_tokens) tokens are output.
-
-All are used with the frozen LLaVA (no training).
+    fourier_vlm  Fourier-VLM low-frequency truncation: global DCT, keep the
+                 top-left C x C coefficients, C-point inverse DCT (C^2 = K).
+    avgpool      average pooling of the 24 x 24 grid to K tokens.
+    prumerge     port of the official LLaVA-PruMerge `token_prune_merge_advanced`
+                 (github.com/42Shawn/LLaVA-PruMerge, Apache-2.0); K - 1 tokens
+                 + 1 summary token instead of the adaptive IQR count.
 """
 
 from typing import Dict, Optional
@@ -75,7 +60,6 @@ class ParameterFreeCompressor(nn.Module):
             self.dct_cut = SpatialDCT2d(self.cutoff)
         else:
             self.grid = factor_grid(cfg.target_visual_tokens)
-        # Same diagnostics surface as VisualCompressor.
         self.keep_attention = False
         self.last_attention: Optional[torch.Tensor] = None
         self.last_shapes: Dict[str, tuple] = {}

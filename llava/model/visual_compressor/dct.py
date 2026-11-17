@@ -1,11 +1,4 @@
-"""Orthonormal 2-D DCT-II over the two spatial axes (never the channel axis).
-
-Conventions: a block is ``(..., b, b, D)`` = (rows, cols, channels).
-``D_n[k, i] = a_k cos(pi (2i + 1) k / 2n)``, ``a_0 = sqrt(1/n)``,
-``a_k = sqrt(2/n)``; ``D_n @ D_n.T = I``.
-Forward: ``F = D_b G D_b^T`` per channel; ``F[u, v]``, u vertical frequency.
-Inverse: ``G = D_b^T F D_b``.
-"""
+"""Orthonormal 2-D DCT-II over the spatial axes: F = D X D^T per channel."""
 
 import math
 
@@ -36,16 +29,11 @@ def idct2(f: torch.Tensor, mat: torch.Tensor) -> torch.Tensor:
 
 
 class SpatialDCT2d(nn.Module):
-    """2-D DCT of ``(..., n, n, D)`` with the matrix stored as a buffer.
-
-    The transform is computed in float32 (autocast disabled) and cast back to
-    the input dtype; it is differentiable w.r.t. its input.
-    """
+    """2-D DCT of ``(..., n, n, D)`` (computed in float32)."""
 
     def __init__(self, n: int):
         super().__init__()
         self.n = n
-        # Not persistent: rebuilt from n, so checkpoints stay small.
         self.register_buffer("mat", dct_matrix(n), persistent=False)
 
     def _check(self, x: torch.Tensor):
