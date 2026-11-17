@@ -102,6 +102,26 @@ $$\mathcal{L} = \mathcal{L}_{CE} + \lambda \frac{T^2}{|\mathcal{A}|} \sum_{t \in
 | AFC-block (ours) | 64 | 57.9 | 67.6 | 50.2 | 81.7 | **60.7** | 35.4 | 58.9 |
 | AFC-global (ours) | 64 | **58.3** | 68.5 | 49.4 | **82.5** | 60.2 | 35.6 | **59.1** |
 
+### Ablation study
+
+> 64 tokens, 544k training samples, same setting as above. *w/o KD*: cross-entropy only. *w/o padding*: LLaVA-1.5 pads every image to a square, so part of the CLIP feature map corresponds to padding; here the padding rows/columns (located from the original image size) are removed before the DCT, with the same CLIP input and the same number of output tokens.
+
+| Setting | GQA | SciQA | VQA<sup>T</sup> | POPE | MMB | MMMU | Avg. |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| AFC-global | 58.3 | 68.5 | 49.4 | 82.5 | 60.2 | 35.6 | 59.1 |
+| └ w/o KD | 57.8 | 68.1 | 49.0 | 81.8 | 59.9 | 34.6 | 58.5 (−0.6) |
+| └ w/o padding | 58.5 | 68.2 | 50.1 | 82.4 | 60.4 | 34.8 | 59.1 (0.0) |
+| AFC-block | 57.9 | 67.6 | 50.2 | 81.7 | 60.7 | 35.4 | 58.9 |
+| └ w/o padding | 58.8 | 67.7 | 51.2 | 83.1 | 62.0 | 35.3 | **59.7 (+0.8)** |
+
+Removing KD lowers every benchmark. Removing the padding leaves AFC-global unchanged but improves AFC-block by 0.8%p (the best 64-token result), since each block otherwise spends the same number of tokens on padded border blocks.
+
+<div align="center">
+<img src="assets/padding_ablation.png" width="420" />
+<br>
+<b>Padding ablation: DCT on the full feature map (w/ padding) vs. on the image area only (w/o padding).</b>
+</div>
+
 ### Computational cost
 
 > Theoretical values for Vicuna-7B (FP16, 64 text tokens assumed). KV cache per token $= 2 L d_{LLM} b = 0.5$ MiB; prefill $\approx 2Pn + 2 L d_{LLM} n^2$ ($P = 6.48$B without embeddings, $n$: input tokens). AFC FLOPs are measured on the trained configuration (`scripts/afc/complexity.py`).
@@ -146,6 +166,8 @@ RUN_NAME=block_all EXTRA_CONFIG=configs/afc/full.yaml MAX_TRAIN_SAMPLES=all \
 TRAIN_GPU=0 TRAIN_GPUS=0,1 EVAL_GPUS="0 1" TARGET_EFFECTIVE_BATCH=24 START_STAGE=train \
     bash scripts/afc/pipeline_main.sh
 ```
+Ablations use the same command with `configs/afc/global_nokd.yaml` (w/o KD), `configs/afc/global_valid.yaml` and `configs/afc/block_valid.yaml` (w/o padding).
+
 `pipeline_main.sh` runs train → quick eval → full eval and logs to W&B (`USE_WANDB=0` to disable). A single run without the pipeline: `GPU=0 bash scripts/afc/train.sh <run name> <config yaml>`.
 
 ### 4. Evaluation
@@ -171,7 +193,7 @@ CUDA_VISIBLE_DEVICES= python -m pytest -q tests/afc
 
 | Path | Role |
 | :--- | :--- |
-| `llava/model/visual_compressor/` | AFC: `dct.py`, `blocks.py`, `positional.py`, `frequency_encoder.py`, `query_pool.py`, `adapter.py`, `compressor.py`, `fixed_compressors.py` (baselines), `config.py`, `builder.py` |
+| `llava/model/visual_compressor/` | AFC: `dct.py`, `blocks.py`, `positional.py`, `frequency_encoder.py`, `query_pool.py`, `adapter.py`, `compressor.py`, `valid_region.py` (padding removal), `fixed_compressors.py` (baselines), `config.py`, `builder.py` |
 | `llava/model/llava_arch.py` | `encode_images`: compressor between the vision tower and the projector |
 | `llava/train/train_compressor.py` | training entry point (CE + answer-token KD) |
 | `llava/eval/afc/` | evaluation helpers (lmms-eval / LLaVA official scorers) |
